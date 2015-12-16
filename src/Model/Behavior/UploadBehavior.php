@@ -303,8 +303,11 @@ class UploadBehavior extends Behavior
     {
         if(is_array($value)) {
             strcmp($prefix, '') ? $prefix = $prefix . '.' . $key : $prefix = $key;
-            foreach($value as $subKey => $subValue) {
-                $fieldIdentifiers = $this->_addIdentifiers($subKey, $subValue, $prefix, $fieldIdentifiers);
+            $arrayKeys = array_keys($value);
+            if(array_keys($arrayKeys) !== $arrayKeys) {
+                foreach($value as $subKey => $subValue) {
+                    $fieldIdentifiers = $this->_addIdentifiers($subKey, $subValue, $prefix, $fieldIdentifiers);
+                }
             }
         } else {
             strcmp($prefix, '') ? $field = ':' . $prefix . '.' . $key : $field = ':' . $key;
