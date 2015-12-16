@@ -263,7 +263,7 @@ class UploadBehavior extends Behavior
     protected function _buildIdentifiersArray(Array $entityArray, $useFieldIdentifiers = true)
     {
         $identifiers = [
-            ':id' => isset($entityArray['id']) ? $entityArray['id'] : '',
+            ':id' => isset($entityArray['id']) ? $entityArray['id'] : 'id',
             ':md5' => md5(rand() . uniqid() . time()),
             ':y' => date('Y'),
             ':m' => date('m'),
