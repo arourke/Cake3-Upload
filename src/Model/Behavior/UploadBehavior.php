@@ -88,7 +88,7 @@ class UploadBehavior extends Behavior
 
             $extension = (new File($file['name'], false))->ext();
             
-            if(isset($fieldOption['useFieldIdentifiers']) && ($fieldOption['useFieldIdentifiers'] === false)) {
+            if (isset($fieldOption['useFieldIdentifiers']) && ($fieldOption['useFieldIdentifiers'] === false)) {
                 $identifiers = $this->_buildIdentifiersArray($data, false);
             } else {
                 $identifiers = $this->_buildIdentifiersArray($data);
@@ -97,7 +97,7 @@ class UploadBehavior extends Behavior
                 throw new \ErrorException(__('Error building identifiers array'));
             }
             
-            $uploadPath = $this->_getUploadPath($entity, $fieldOption['path'], $extension, $identifiers);
+            $uploadPath = $this->_getUploadPath($entity, $identifiers, $fieldOption['path'], $extension);
             if (!$uploadPath) {
                 throw new \ErrorException(__('Error to get the uploadPath.'));
             }
@@ -259,7 +259,7 @@ class UploadBehavior extends Behavior
      * @param bool  $useFieldIdentifiers Set as false to disable field identifiers.
      *
      * @return bool|string
-     */    
+     */
     protected function _buildIdentifiersArray(Array $entityArray, $useFieldIdentifiers = true)
     {
         $identifiers = [
@@ -267,10 +267,10 @@ class UploadBehavior extends Behavior
             ':md5' => md5(rand() . uniqid() . time()),
             ':y' => date('Y'),
             ':m' => date('m'),
-            ':d' => date('d') 
+            ':d' => date('d')
         ];
         
-        if($useFieldIdentifiers === true) {
+        if ($useFieldIdentifiers === true) {
             $fieldIdentifiers = [];
             foreach ($entityArray as $key => $value) {
                 $fieldIdentifiers = $this->_addIdentifiers($key, $value, '', $fieldIdentifiers);
@@ -289,7 +289,7 @@ class UploadBehavior extends Behavior
      * instance if articles has one creator, and you want to get that creator's name,
      * you would use :creator.name to access this value.
      *
-     * If the user references an empty value, the $key is used instead.     
+     * If the user references an empty value, the $key is used instead.
      *
      * @param string $key               The key for the value being analyzed.
      * @param string $value             The value for the value being analyzed.
@@ -301,11 +301,11 @@ class UploadBehavior extends Behavior
      */
     protected function _addIdentifiers($key, $value, $prefix, array $fieldIdentifiers)
     {
-        if(is_array($value)) {
+        if (is_array($value)) {
             strcmp($prefix, '') ? $prefix = $prefix . '.' . $key : $prefix = $key;
             $arrayKeys = array_keys($value);
-            if(array_keys($arrayKeys) !== $arrayKeys) {
-                foreach($value as $subKey => $subValue) {
+            if (array_keys($arrayKeys) !== $arrayKeys) {
+                foreach ($value as $subKey => $subValue) {
                     $fieldIdentifiers = $this->_addIdentifiers($subKey, $subValue, $prefix, $fieldIdentifiers);
                 }
             }
@@ -354,7 +354,7 @@ class UploadBehavior extends Behavior
      *
      * @return bool|string
      */
-    protected function _getUploadPath(Entity $entity, $path = false, $extension = false, array $identifiers)
+    protected function _getUploadPath(Entity $entity, array $identifiers, $path = false, $extension = false)
     {
         if ($extension === false || $path === false) {
             return false;
