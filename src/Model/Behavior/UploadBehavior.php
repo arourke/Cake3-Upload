@@ -87,7 +87,17 @@ class UploadBehavior extends Behavior
             }
 
             $extension = (new File($file['name'], false))->ext();
-            $uploadPath = $this->_getUploadPath($entity, $fieldOption['path'], $extension);
+            
+            if(isset($fieldOption['useFieldIdentifiers']) && ($fieldOption['useFieldIdentifiers'] === false)) {
+                $identifiers = $this->_buildIdentifiersArray($data, false);
+            } else {
+                $identifiers = $this->_buildIdentifiersArray($data);
+            }
+            if (!$identifiers) {
+                throw new \ErrorException(__('Error building identifiers array'));
+            }
+            
+            $uploadPath = $this->_getUploadPath($entity, $fieldOption['path'], $extension, $identifiers);
             if (!$uploadPath) {
                 throw new \ErrorException(__('Error to get the uploadPath.'));
             }
@@ -235,36 +245,119 @@ class UploadBehavior extends Behavior
     }
 
     /**
-     * Get the path formatted without its identifiers to upload the file.
+     * Builds identifiers array using both default values and fields from entity.
      *
      * Identifiers :
-     *      :id  : Id of the Entity.
-     *      :md5 : A random and unique identifier with 32 characters.
-     *      :y   : Based on the current year.
-     *      :m   : Based on the current month.
+     *      :md5   : A random and unique identifier with 32 characters.
+     *      :y     : Based on the current year.
+     *      :m     : Based on the current month.
+     *      :d     : Based on the current day.
+     *      :field : Any array field within the entity. see notes for _addIdentifiers
+     *                 for more information.
+     *
+     * @param array $entityArray         Entity information in array format.
+     * @param bool  $useFieldIdentifiers Set as false to disable field identifiers.
+     *
+     * @return bool|string
+     */    
+    protected function _buildIdentifiersArray(Array $entityArray, $useFieldIdentifiers = true)
+    {
+        $identifiers = [
+            ':id' => isset($entityArray['id']) ? $entityArray['id'] : '',
+            ':md5' => md5(rand() . uniqid() . time()),
+            ':y' => date('Y'),
+            ':m' => date('m'),
+            ':d' => date('d') 
+        ];
+        
+        if($useFieldIdentifiers === true) {
+            $fieldIdentifiers = [];
+            foreach ($entityArray as $key => $value) {
+                $fieldIdentifiers = $this->_addIdentifiers($key, $value, '', $fieldIdentifiers);
+            }
+            $identifiers = array_unique(array_merge($identifiers, $fieldIdentifiers));
+        }
+        
+        return $identifiers;
+    }
+
+    /**
+     * Recurses an entity array and builds key-value pairs, which are then added to
+     * $identifiers array.
+     *
+     * Sub-array (associated values) values are notated as :parent.child so for
+     * instance if articles has one creator, and you want to get that creator's name,
+     * you would use :creator.name to access this value.
+     *
+     * If the user references an empty value, the $key is used instead.     
+     *
+     * @param string $key               The key for the value being analyzed.
+     * @param string $value             The value for the value being analyzed.
+     * @param string $prefix            For deeply associated values, the prefix used to
+     *                                  denote parent in :parent.child relationship.
+     * @param array  $fieldIdentifiers  Identifiers for fields already processed.
+     *
+     * @return string
+     */
+    protected function _addIdentifiers($key, $value, $prefix, array $fieldIdentifiers)
+    {
+        if(is_array($value)) {
+            strcmp($prefix, '') ? $prefix = $prefix . '.' . $key : $prefix = $key;
+            foreach($value as $subKey => $subValue) {
+                $fieldIdentifiers = $this->_addIdentifiers($subKey, $subValue, $prefix, $fieldIdentifiers);
+            }
+        } else {
+            strcmp($prefix, '') ? $field = ':' . $prefix . '.' . $key : $field = ':' . $key;
+            empty($value) ? $fieldIdentifiers[$field] = $key : $fieldIdentifiers[$field] = $this->_sanitizeField($value);
+        }
+        
+        return $fieldIdentifiers;
+    }
+
+    /**
+     * When using database values to create paths, we have to ensure these values comply
+     * with naming conventions for files in folders in Windows and Linux. This function
+     * replaces reserved or illegal charachters for both operating systems with a "-".
+     *
+     * File and folder naming conventions:
+     * Windows: https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247.aspx
+     * Linux: http://www.cyberciti.biz/faq/linuxunix-rules-for-naming-file-and-directory-names/
+     *
+     * This function also limits the legnth of field values to 40 charachters, to avoid
+     * path legnths which are too long. This limit is 255 charachters in linux and 260
+     * charachters in Windows.
+     *
+     * @param string $value identifier value to be sanitized.
+     *
+     * @return string
+     */
+    protected function _sanitizeField($value)
+    {
+        $value = mb_ereg_replace("([^\w\s\d\-_~,;\[\]\(\)])", '-', $value);
+        $value = mb_ereg_replace("([\.]{2,})", '', $value);
+        $value = substr($value, 0, 40);
+        return $value;
+    }
+
+    /**
+     * Get the path formatted without its identifiers to upload the file.
      *
      * i.e : upload/:id/:md5 -> upload/2/5e3e0d0f163196cb9526d97be1b2ce26.jpg
      *
-     * @param \Cake\ORM\Entity $entity    The entity that is going to be saved.
-     * @param bool|string      $path      The path to upload the file with its identifiers.
-     * @param bool|string      $extension The extension of the file.
+     * @param \Cake\ORM\Entity $entity      The entity that is going to be saved.
+     * @param bool|string      $path        The path to upload the file with its identifiers.
+     * @param bool|string      $extension   The extension of the file.
+     * @param array            $identifiers Identifiers used in string replacement.
      *
      * @return bool|string
      */
-    protected function _getUploadPath(Entity $entity, $path = false, $extension = false)
+    protected function _getUploadPath(Entity $entity, $path = false, $extension = false, array $identifiers)
     {
         if ($extension === false || $path === false) {
             return false;
         }
 
         $path = trim($path, DS);
-
-        $identifiers = [
-            ':id' => $entity->id,
-            ':md5' => md5(rand() . uniqid() . time()),
-            ':y' => date('Y'),
-            ':m' => date('m')
-        ];
 
         return strtr($path, $identifiers) . '.' . strtolower($extension);
     }
