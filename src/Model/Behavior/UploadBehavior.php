@@ -348,9 +348,9 @@ class UploadBehavior extends Behavior
      * i.e : upload/:id/:md5 -> upload/2/5e3e0d0f163196cb9526d97be1b2ce26.jpg
      *
      * @param \Cake\ORM\Entity $entity      The entity that is going to be saved.
+     * @param array            $identifiers Identifiers used in string replacement.
      * @param bool|string      $path        The path to upload the file with its identifiers.
      * @param bool|string      $extension   The extension of the file.
-     * @param array            $identifiers Identifiers used in string replacement.
      *
      * @return bool|string
      */
