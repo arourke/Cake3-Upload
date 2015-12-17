@@ -88,11 +88,8 @@ class UploadBehavior extends Behavior
 
             $extension = (new File($file['name'], false))->ext();
             
-            if (isset($fieldOption['useFieldIdentifiers']) && ($fieldOption['useFieldIdentifiers'] === false)) {
-                $identifiers = $this->_buildIdentifiersArray($data, false);
-            } else {
-                $identifiers = $this->_buildIdentifiersArray($data);
-            }
+            $fieldIdentifiers = isset($fieldOption['fieldIdentifiers']) ? (bool)$fieldOption['fieldIdentifiers'] : true;
+            $identifiers = $this->_buildIdentifiersArray($data, $fieldIdentifiers);
             if (!$identifiers) {
                 throw new \ErrorException(__('Error building identifiers array'));
             }
@@ -255,12 +252,12 @@ class UploadBehavior extends Behavior
      *      :field : Any array field within the entity. see notes for _addIdentifiers
      *                 for more information.
      *
-     * @param array $entityArray         Entity information in array format.
-     * @param bool  $useFieldIdentifiers Set as false to disable field identifiers.
+     * @param array $entityArray      Entity information in array format.
+     * @param bool  $fieldIdentifiers Set as false to disable field identifiers.
      *
      * @return bool|string
      */
-    protected function _buildIdentifiersArray(Array $entityArray, $useFieldIdentifiers = true)
+    protected function _buildIdentifiersArray(array $entityArray, $fieldIdentifiers = true)
     {
         $identifiers = [
             ':id' => isset($entityArray['id']) ? $entityArray['id'] : 'id',
@@ -270,12 +267,12 @@ class UploadBehavior extends Behavior
             ':d' => date('d')
         ];
         
-        if ($useFieldIdentifiers === true) {
-            $fieldIdentifiers = [];
+        if ($fieldIdentifiers === true) {
+            $fieldIdentifiersArray = [];
             foreach ($entityArray as $key => $value) {
-                $fieldIdentifiers = $this->_addIdentifiers($key, $value, '', $fieldIdentifiers);
+                $fieldIdentifiersArray = $this->_addIdentifiers($key, $value, '', $fieldIdentifiersArray);
             }
-            $identifiers = array_unique(array_merge($identifiers, $fieldIdentifiers));
+            $identifiers = array_unique(array_merge($identifiers, $fieldIdentifiersArray));
         }
         
         return $identifiers;
